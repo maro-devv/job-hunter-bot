@@ -1,0 +1,148 @@
+{
+  "name": "Telegram Commands",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -320,
+        0
+      ],
+      "id": "8e5e13a2-31b5-4488-9f45-f2910a97db57",
+      "name": "Telegram Trigger",
+      "webhookId": "e1d3a9a1-cb56-43da-a2ae-cec070d6d7d9",
+      "credentials": {
+        "telegramApi": {
+          "id": "jQh5z51eUkviTRO3",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1-Daqt_1ISayMnLl3Uw9URqSRqGYazXQGOM-8wysu4kk",
+          "mode": "list",
+          "cachedResultName": "Job Hunter",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1-Daqt_1ISayMnLl3Uw9URqSRqGYazXQGOM-8wysu4kk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "jobs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1-Daqt_1ISayMnLl3Uw9URqSRqGYazXQGOM-8wysu4kk/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -80,
+        0
+      ],
+      "id": "2ab9c85f-aa44-476f-ac29-2a728d983e23",
+      "name": "Read Jobs",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "vNsGAeUQ3t1jVLcG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $('Telegram Trigger').first().json.message;\nconst cmd = (msg.text || '').trim().toLowerCase();\nconst chatId = msg.chat.id;\nconst rows = $input.all().map(i => i.json).filter(r => r.title);\n\nlet wanted = null;\nif (cmd.startsWith('/remote')) wanted = 'Remote';\nelse if (cmd.startsWith('/alex')) wanted = 'Alexandria';\nelse if (!cmd.startsWith('/all')) {\n  return [{ json: { chatId, text: 'Commands: /remote  /alex  /all' } }];\n}\n\nconst list = rows\n    .filter(r => !wanted || String(r.area || '').trim().toLowerCase() === wanted.toLowerCase())\n  .slice(0, 10);\n\nif (list.length === 0) {\n  return [{ json: { chatId, text: 'No jobs found for this filter yet.' } }];\n}\n\nconst text = list\n  .map((r, i) => `${i + 1}. ${r.title} - ${r.company} (${r.location})\\n${r.link}`)\n  .join('\\n\\n');\n\nreturn [{ json: { chatId, text } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        0
+      ],
+      "id": "3baf6cdf-9584-408a-84af-6758f89daed9",
+      "name": "Build Reply"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        368,
+        0
+      ],
+      "id": "e7669b92-f842-434c-8df1-38a7399bfa1d",
+      "name": "Send Reply",
+      "webhookId": "4e7f5d26-17c3-46a5-8662-96e2ace2c65a",
+      "credentials": {
+        "telegramApi": {
+          "id": "jQh5z51eUkviTRO3",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Jobs": {
+      "main": [
+        [
+          {
+            "node": "Build Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Reply": {
+      "main": [
+        [
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "fe380026-b663-4403-9975-37fa3bcb6cee",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "14365daff8b362361ad363f9c7d8b21d5cd0f6b208349a22738c0e324f48e137"
+  },
+  "nodeGroups": [],
+  "id": "Dmnf43NbUPa2y1Ag",
+  "tags": []
+}

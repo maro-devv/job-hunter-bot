@@ -1,0 +1,249 @@
+{
+  "name": "Job Hunter Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const noise = /^(this company is actively hiring|actively (hiring|recruiting)|apply with resume|easy apply|your job alert|see all jobs|manage your)/i;\nconst jobs = [];\n\nfor (const item of $input.all()) {\n  const text = item.json.text || '';\n  const html = item.json.html || '';\n  const date = item.json.date;\n  const lines = text.split('\\n').map(l => l.trim());\n\n  const getArea = (id, location) => {\n    if (/alexandria|الإسكندرية/i.test(location)) return 'Alexandria';\n    const start = html.indexOf('jobs/view/' + id);\n    if (start === -1) return 'Other';\n    const re = /jobs\\/view\\/(\\d+)/g;\n    re.lastIndex = start;\n    let end = html.length;\n    let m2;\n    while ((m2 = re.exec(html)) !== null) {\n      if (m2[1] !== id) { end = m2.index; break; }\n    }\n    return /\\(Remote\\)/i.test(html.slice(start, end)) ? 'Remote' : 'Other';\n  };\n\n  for (let i = 0; i < lines.length; i++) {\n    const m = lines[i].match(/^View job:.*\\/jobs\\/view\\/(\\d+)/);\n    if (!m) continue;\n\n    const card = [];\n    for (let j = i - 1; j >= 0 && card.length < 3; j--) {\n      const l = lines[j];\n      if (!l) continue;\n      if (/^View job:/.test(l) || /^-{5,}/.test(l)) break;\n      if (noise.test(l)) continue;\n      card.unshift(l);\n    }\n    if (card.length < 3) continue;\n\n    jobs.push({\n      json: {\n        title: card[0],\n        company: card[1],\n        location: card[2],\n        area: getArea(m[1], card[2]),\n        link: 'https://www.linkedin.com/jobs/view/' + m[1],\n        date: date\n      }\n    });\n  }\n}\n\nreturn jobs;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        256,
+        0
+      ],
+      "id": "d6e7ebfe-0372-40d1-9ba1-93587e6e679b",
+      "name": "Extract Jobs"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1-Daqt_1ISayMnLl3Uw9URqSRqGYazXQGOM-8wysu4kk",
+          "mode": "list",
+          "cachedResultName": "Job Hunter",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1-Daqt_1ISayMnLl3Uw9URqSRqGYazXQGOM-8wysu4kk/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "jobs",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1-Daqt_1ISayMnLl3Uw9URqSRqGYazXQGOM-8wysu4kk/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "link"
+          ],
+          "schema": [
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "link",
+              "displayName": "link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        0
+      ],
+      "id": "8363a526-f475-4464-904f-dbbb26cbf04a",
+      "name": "Save to Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "vNsGAeUQ3t1jVLcG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "251caefe-ec96-46f6-91ac-7572ee60ace8",
+              "leftValue": "={{ $json.title }}",
+              "rightValue": "senior|principal|lead|manager|head of",
+              "operator": {
+                "type": "string",
+                "operation": "notRegex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        0
+      ],
+      "id": "19011224-e6e2-4837-b217-8ad9625ae5c8",
+      "name": "Remove Senior"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        0
+      ],
+      "id": "d47520e6-15de-43c2-bb4c-dd9a3caa16fa",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 15,
+        "simple": false,
+        "filters": {
+          "sender": "jobalerts-noreply@linkedin.com"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        48,
+        0
+      ],
+      "id": "4478d31c-c2a2-4c4e-a78e-6f28be751318",
+      "name": "Get many messages",
+      "webhookId": "dba21efb-1371-4efd-aa28-dc6cedaef9ea",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "sfIbExaiTvrLgZhJ",
+          "name": "Gmail account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Extract Jobs": {
+      "main": [
+        [
+          {
+            "node": "Remove Senior",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Senior": {
+      "main": [
+        [
+          {
+            "node": "Save to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Extract Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "d9hnThFzZfbJeP4x",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "b114354e-5061-4191-918b-4e19144010e6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "14365daff8b362361ad363f9c7d8b21d5cd0f6b208349a22738c0e324f48e137"
+  },
+  "nodeGroups": [],
+  "id": "P6QcF2ef971kFera",
+  "tags": []
+}
